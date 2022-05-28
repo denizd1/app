@@ -32,7 +32,7 @@
     "file-saver": "^2.0.5",
     "helmet": "^5.0.2",
     "jsonwebtoken": "^8.5.1",
-    "material-design-icons-iconfont": "^6.1.1",
+    "material-design-icons-iconfont": "^6.7.0",
     "pg": "^8.7.1",
     "pg-hstore": "^2.3.4",
     "script-loader": "^0.7.2",
