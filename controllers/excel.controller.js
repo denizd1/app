@@ -198,37 +198,6 @@ const importData = (element, user) => {
   var latlon = null;
   var dummyCity = null;
   var thisCity = null;
-  // if (
-  //   data["calisma_amaci"] !== "TÜRKİYE GENELİ HAVADAN JEOFİZİK ARAŞTIRMALAR"
-  // ) {
-  //   if (data["il"] === null || data["il"] === undefined) {
-  //     throw new Error("İl alanını kontrol ediniz.");
-  //   } else {
-  //     if (data["il"] !== null && data["il"] !== undefined) {
-  //       if (data["il"].includes(",")) {
-  //         dummyCity = data["il"].split(",")[0];
-  //         thisCity = citiesLatLongjson.filter(
-  //           (city) => city.il == dummyCity.trim()
-  //         )[0];
-  //       } else {
-  //         dummyCity = data["il"];
-  //         thisCity = citiesLatLongjson.filter(
-  //           (city) => city.il == dummyCity.trim()
-  //         )[0];
-  //       }
-  //       data["lat"] = parseFloat(thisCity.longitude);
-  //       data["lon"] = parseFloat(thisCity.latitude);
-  //     } else if (
-  //       data["a_1"] === null &&
-  //       data["a_2"] === null &&
-  //       data["a_3"] === null &&
-  //       data["a_4"] === null
-  //     ) {
-  //       //throw error to async upload function
-  //       throw new Error("İl alanını kontrol ediniz.");
-  //     }
-  //   }
-  // }
 
   if (data["x"] !== null && data["y"] !== null) {
     latlon = converter(data["x"], data["y"], data["zone"], data["datum"]);
@@ -241,6 +210,17 @@ const importData = (element, user) => {
     data["yirmibesbin"] = check.yirmibes;
     data["il"] = check.il;
     data["ilce"] = check.ilce;
+  } else if (data["il"] !== null && data["x"] === null && data["y"] === null) {
+    dummyCity = il.includes(",") ? il.split(",")[0].trim() : il.trim();
+
+    thisCity = citiesLatLongjson.find((city) => city.il === dummyCity);
+
+    if (!thisCity) {
+      throw new Error(`Şehir "${dummyCity}" bulunamadı.`);
+    }
+
+    data["lat"] = parseFloat(thisCity.longitude);
+    data["lon"] = parseFloat(thisCity.latitude);
   }
 
   if (
@@ -380,11 +360,11 @@ const importData = (element, user) => {
       data["calisma_tarihi"] = data["calisma_tarihi"].toString();
     } else {
       data["calisma_tarihi"] =
-        data["calisma_tarihi"].getDate() +
+        data["calisma_tarihi"].getUTCDate() +
         "/" +
-        (data["calisma_tarihi"].getMonth() + 1) +
+        (data["calisma_tarihi"].getUTCMonth() + 1) +
         "/" +
-        data["calisma_tarihi"].getFullYear();
+        data["calisma_tarihi"].getUTCFullYear();
     }
   } else if (typeof data["calisma_tarihi"] === "string") {
     data["calisma_tarihi"] = data["calisma_tarihi"];

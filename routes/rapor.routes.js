@@ -8,7 +8,19 @@ module.exports = (app) => {
   router.get(
     "/",
     [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
-    raporController.getAll
+    raporController.findAll
+  );
+  // get unique values from each column
+  router.get(
+    "/unique-values",
+    [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
+    raporController.getUniqueValues
+  );
+  // get rapor by id
+  router.get(
+    "/:id",
+    [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
+    raporController.findOne
   );
 
   app.use("/api/rapor", router);

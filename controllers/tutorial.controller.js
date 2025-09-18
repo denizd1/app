@@ -585,6 +585,50 @@ exports.findAllgetAll = (req, res) => {
             ),
     })
       .then((data) => {
+        //count number of points for each alt_yontem
+        const altYontemCounts = {};
+        data.forEach((item) => {
+          if (item.alt_yontem) {
+            //if item.yontem is Kuyu Ölçüleri, find the sum of
+            //derinlik_m_gr
+            // derinlik_m_neu
+            // derinlik_m_den
+            // derinlik_m_res
+            // derinlik_m_sp
+            // derinlik_m_cal
+            // derinlik_m_term
+            // derinlik_m_sgr
+            // derinlik_m_cbl
+            // derinlik_m_son
+            // derinlik_m_ccl
+
+            if (item.yontem === "Kuyu Ölçüleri") {
+              const depthFields = [
+                "derinlik_m_gr",
+                "derinlik_m_neu",
+                "derinlik_m_den",
+                "derinlik_m_res",
+                "derinlik_m_sp",
+                "derinlik_m_cal",
+                "derinlik_m_term",
+                "derinlik_m_sgr",
+                "derinlik_m_cbl",
+                "derinlik_m_son",
+                "derinlik_m_ccl",
+              ];
+              depthFields.forEach((field) => {
+                if (item[field] && !isNaN(item[field])) {
+                  altYontemCounts[field] =
+                    (altYontemCounts[field] || 0) + parseFloat(item[field]);
+                }
+              });
+            }
+
+            altYontemCounts[item.alt_yontem] =
+              (altYontemCounts[item.alt_yontem] || 0) + 1;
+          }
+        });
+
         var resdata = null;
 
         //need to create line for geojson if profil_baslangic_x and profil_baslangic_y is not null
@@ -668,6 +712,8 @@ exports.findAllgetAll = (req, res) => {
         var resLines = lines;
 
         resdata = { resPoints: resPoints, resLines: resLines };
+        //include altYontemCounts to resdata
+        resdata["altYontemCounts"] = altYontemCounts;
         res.send(resdata);
       })
       .catch((err) => {
@@ -1054,6 +1100,49 @@ exports.findAllGeo = (req, res) => {
       ],
     })
       .then((data) => {
+        const altYontemCounts = {};
+        data.forEach((item) => {
+          if (item.alt_yontem) {
+            //if item.yontem is Kuyu Ölçüleri, find the sum of
+            //derinlik_m_gr
+            // derinlik_m_neu
+            // derinlik_m_den
+            // derinlik_m_res
+            // derinlik_m_sp
+            // derinlik_m_cal
+            // derinlik_m_term
+            // derinlik_m_sgr
+            // derinlik_m_cbl
+            // derinlik_m_son
+            // derinlik_m_ccl
+
+            if (item.yontem === "Kuyu Ölçüleri") {
+              const depthFields = [
+                "derinlik_m_gr",
+                "derinlik_m_neu",
+                "derinlik_m_den",
+                "derinlik_m_res",
+                "derinlik_m_sp",
+                "derinlik_m_cal",
+                "derinlik_m_term",
+                "derinlik_m_sgr",
+                "derinlik_m_cbl",
+                "derinlik_m_son",
+                "derinlik_m_ccl",
+              ];
+              depthFields.forEach((field) => {
+                if (item[field] && !isNaN(item[field])) {
+                  altYontemCounts[field] =
+                    (altYontemCounts[field] || 0) + parseFloat(item[field]);
+                }
+              });
+            }
+
+            altYontemCounts[item.alt_yontem] =
+              (altYontemCounts[item.alt_yontem] || 0) + 1;
+          }
+        });
+
         var resdata = null;
 
         data.forEach((item) => {
@@ -1136,6 +1225,7 @@ exports.findAllGeo = (req, res) => {
         var resLines = lines;
 
         resdata = { resPoints: resPoints, resLines: resLines };
+        resdata["altYontemCounts"] = altYontemCounts;
         res.send(resdata);
       })
       .catch((err) => {
