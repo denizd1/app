@@ -46,7 +46,7 @@
     "read-excel-file": "^5.5.3",
     "script-loader": "^0.7.2",
     "secure-env": "^1.2.0",
-    "sequelize": "^6.25.3",
+    "sequelize": "^6.37.2",
     "turf": "^3.0.14",
     "turf-linestring": "^1.0.2",
     "turf-multipolygon": "^1.0.1",
