@@ -21,7 +21,7 @@
     "@turf/boolean-point-in-polygon": "^6.5.0",
     "@turf/center-of-mass": "^6.5.0",
     "@turf/intersect": "^6.5.0",
-    "@vee-validate/i18n": "^4.5.10",
+    "@vee-validate/i18n": "^4.12.6",
     "axios": "^0.24.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
