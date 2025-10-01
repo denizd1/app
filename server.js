@@ -1,12 +1,12 @@
+require("dotenv").config();
+
 require("v8-compile-cache");
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const compression = require("compression");
-let secureEnv = require("secure-env");
 global.__basedir = __dirname + "/..";
-global.env = secureEnv({ secret: "mySecretPassword" });
 const cluster = require("cluster");
 const os = require("os");
 
@@ -48,7 +48,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
-    secret: global.env.SESSIONSECRET,
+    secret: process.env.SESSIONSECRET,
     resave: true,
     saveUninitialized: true,
   })
@@ -103,7 +103,7 @@ if (cluster.isMaster) {
 
   db.sequelize.sync();
   // set port, listen for requests
-  const PORT = global.env.PORT || 8080;
+  const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
   });

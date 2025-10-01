@@ -1,17 +1,33 @@
 const fs = require("fs");
+const path = require("path");
 const booleanPointInPolygon = require("@turf/boolean-point-in-polygon");
 const booleanIntersects = require("@turf/boolean-intersects");
 const intersection = require("@turf/intersect");
 const turfpolygon = require("turf-polygon");
 const turfmultiPolygon = require("turf-multipolygon");
-var pafta25000 = JSON.parse(fs.readFileSync("pafta25000.geojson"));
-var pafta100000 = JSON.parse(fs.readFileSync("pafta100000.geojson"));
-var pafta500000 = JSON.parse(fs.readFileSync("pafta500000.geojson"));
-var cities = JSON.parse(fs.readFileSync("tr-cities-utf8.geojson"));
-var districts = JSON.parse(fs.readFileSync("tr_ilce.geojson"));
+
+// Always resolve from project root
+const dataDir = path.join(__dirname, "..");
+
+const pafta25000 = JSON.parse(
+  fs.readFileSync(path.join(dataDir, "pafta25000.geojson"), "utf8")
+);
+const pafta100000 = JSON.parse(
+  fs.readFileSync(path.join(dataDir, "pafta100000.geojson"), "utf8")
+);
+const pafta500000 = JSON.parse(
+  fs.readFileSync(path.join(dataDir, "pafta500000.geojson"), "utf8")
+);
+const cities = JSON.parse(
+  fs.readFileSync(path.join(dataDir, "tr-cities-utf8.geojson"), "utf8")
+);
+const districts = JSON.parse(
+  fs.readFileSync(path.join(dataDir, "tr_ilce.geojson"), "utf8")
+);
 
 //check if point is in polygon. If yes then return yirmibes, yuz, besyuz, il, ilce
 const checkPointInPolygon = (lat, lon) => {
+  console.log("Checking point in polygon for:", lat, lon);
   const isInside25 = pafta25000.features.find((polygon) =>
     booleanPointInPolygon.default([lat, lon], polygon.geometry)
   );

@@ -86,7 +86,7 @@ exports.forgotPassword = async (req, res) => {
     tls: { rejectUnauthorized: false },
     auth: {
       user: "mail.projecthub@gmail.com",
-      pass: global.env.EMAILPASSWORD,
+      pass: process.env.EMAILPASSWORD,
     },
   });
 
