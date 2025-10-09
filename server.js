@@ -33,6 +33,9 @@ app.use(compression()); //Compress all routes
 //   credentials: true,
 // };
 app.use(cors());
+// Bull Board (queue dashboard)
+const { serverAdapter } = require("./dashboard/bullboard");
+app.use("/admin/queues", serverAdapter.getRouter());
 
 //Limiter
 const limiter = rateLimit({
@@ -76,7 +79,15 @@ if (cluster.isMaster) {
   require(__dirname + "/routes/auth.routes")(app);
   require(__dirname + "/routes/user.routes")(app);
   require(__dirname + "/routes/rapor.routes")(app);
-
+  const excelRoutes = require(__dirname + "/routes/excel.routes");
+  app.use("/excel", excelRoutes);
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/admin/queues")) {
+      // Skip CSRF for Bull Board routes
+      return next();
+    }
+    csrfProtection(req, res, next);
+  });
   app.get("/api/getGeoJson:val", function (req, res) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     val = req.params.val;

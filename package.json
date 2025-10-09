@@ -17,6 +17,8 @@
   "author": "Deniz Donmez",
   "license": "ISC",
   "dependencies": {
+    "@bull-board/api": "^6.13.0",
+    "@bull-board/express": "^6.13.0",
     "@turf/boolean-intersects": "^6.5.0",
     "@turf/boolean-point-in-polygon": "^6.5.0",
     "@turf/center-of-mass": "^6.5.0",

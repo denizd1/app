@@ -14,100 +14,9 @@ const {
   intersectionCheck,
   intersectionCheckLine,
 } = require("../controllers/coordfinder.js"); // adjust path if needed
+const { replaceVal } = require("../utils/excelhelpers");
 
 const redisConnection = { connection: { host: "127.0.0.1", port: 6379 } };
-
-// --- helpers copied from your original file ---
-function replaceVal(value) {
-  switch (value) {
-    case "POTANSıYEL_ALAN_YONTEMLERI":
-      return "Potansiyel Alan Yöntemleri";
-    case "ELEKTRIK_VE_ELEKTROMANYETIK_YONTEMLER":
-      return "Elektrik ve Elektromanyetik Yöntemler";
-    case "SISMIK_YONTEMLER":
-      return "Sismik Yöntemler";
-    case "KUYU_OLCULERI":
-      return "Kuyu Ölçüleri";
-    case "GRAVITE":
-      return "Gravite";
-    case "MANYETIK":
-      return "Manyetik";
-    case "HAVADAN MANYETIK":
-      return "Havadan Manyetik";
-    case "HAVADAN GRAVITE":
-      return "Havadan Gravite";
-    case "UYDU GORUNTUSU":
-      return "uydu Görüntüsü";
-    case "RADYOMETRI":
-      return "Radyometri";
-    case "SUSEPTIBILITE":
-      return "Suseptibilite";
-    case "DUSEY_ELEKTRIK_SONDAJI(DES)":
-      return "Düşey Elektrik Sondajı (DES)";
-    case "GECICI_ELEKTROMANYETIK_YONTEM(TEM)":
-      return "Geçici Elektromanyetik Yöntem (TEM)";
-    case "YAPAY_UCLASMA_YONTEMI(IP)":
-      return "Yapay Uçlaşma Yöntemi (IP)";
-    case "GRADIENT_YAPAY_UCLASMA_YONTEMI(IP)":
-      return "Gradient Yapay Uçlaşma Yöntemi (IP)";
-    case "MANYETO_TELLURIK(MT)":
-      return "Manyetotellürik (MT)";
-    case "AUDIO_MANYETO_TELLURIK(AMT)":
-      return "Audio Manyetotellürik (AMT)";
-    case "YAPAY_KAYNAKLI_AUDIO_MANYETO_TELLURIK(CSAMT)":
-      return "Yapay Kaynaklı Audio Manyetotellürik (CSAMT)";
-    case "DOGAL_POTANSIYEL(SP)":
-      return "Doğal Potansiyel (SP)";
-    case "COK_KANALLI_OZDIRENC_YONTEMI":
-      return "Çok Kanallı Özdirenç Yöntemi";
-    case "2_BOYUTLU_SISMIK_YANSIMA":
-      return "2 Boyutlu Sismik Yansıma";
-    case "2_BOYUTLU_SISMIK_KIRILMA":
-      return "2 Boyutlu Sismik Kırılma";
-    case "YER_RADARI":
-      return "Yer Radarı";
-    case "GAMMA_RAY(GR)":
-      return "Gamma Ray (Gr)";
-    case "NEUTRON(NEU)":
-      return "Neutron (Neu)";
-    case "DENSITY(DEN)":
-      return "Density (Den)";
-    case "RESISTVITY(RES)":
-      return "Resistivity (Res)";
-    case "SELF_POTANTIAL(SP)":
-      return "Self Potential (SP)";
-    case "CALIPER(CAL)":
-      return "Caliper (Cal)";
-    case "SICAKLIK_LOGU(TERM)":
-      return "Sıcaklık Logu (Term)";
-    case "SPEKTRAL_GAMMARAY(SGR)":
-      return "Spektral Gammaray (SGR)";
-    case "CIMENTO_LOGU(CBL)":
-      return "Çimento Logu (Cbl)";
-    case "SONIC_LOG(SON)":
-      return "Sonic Log (Son)";
-    case "CASING_COLLOR_LOCATOR(CCL)":
-      return "Casing Collor Locator (CCL)";
-    case "BIRLESIK_LOG":
-      return "Birleşik Log";
-    case "LİNEER":
-      return "Lineer";
-    case "SATILABILIR":
-      return "Satılabilir";
-    case "RADYOAKTİF HAMMADDE":
-      return "Radyoaktif Hammadde";
-    case "KOMUR":
-      return "Kömür";
-    case "JEOTERMAL":
-      return "Jeotermal";
-    case "VAR":
-      return "Var";
-    case "YOK":
-      return "Yok";
-    default:
-      return value;
-  }
-}
 
 function converter(x, y, zone, datum) {
   if (
@@ -311,6 +220,7 @@ async function enrichRow(row) {
 const worker = new Worker(
   "geo-processing",
   async (job) => {
+    console.log(`Starting geo job ${job.id}`);
     if (job.name !== "processRows") return;
 
     const { ids } = job.data;
