@@ -104,6 +104,34 @@ function buildFilters(query, locationCondition) {
     if (!locationCondition && Q.il) add({ il: { [Op.iLike]: `%${Q.il}%` } });
   }
 
+  // ============================================
+  // 🔍  NEW: Universal text search (searchText)
+  // ============================================
+  if (Q.searchText && Q.searchText.trim() !== "") {
+    const term = Q.searchText.trim();
+
+    // Define which columns to search across
+    const searchableFields = [
+      "nokta_adi",
+      "calisma_amaci",
+      "yontem",
+      "alt_yontem",
+      "proje_kodu",
+      "il",
+      "ilce",
+      "kuyu_arsiv_no",
+      "jeofizik_arsiv_no",
+      "derleme_no",
+      "cd_no",
+    ];
+
+    add({
+      [Op.or]: searchableFields.map((field) => ({
+        [field]: { [Op.iLike]: `%${term}%` },
+      })),
+    });
+  }
+
   return filters.length ? filters : null;
 }
 

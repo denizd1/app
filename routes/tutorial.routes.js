@@ -71,8 +71,14 @@ module.exports = (app) => {
   // Delete a Tutorial with id
   router.delete(
     "/:id",
-    [authJwt.verifyToken, authJwt.isAdmin],
+    [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
     tutorials.delete
+  );
+  // routes/tutoral.routes.js
+  router.post(
+    "/bulk-delete",
+    [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
+    tutorials.bulkDelete
   );
 
   // Delete all Tutorials

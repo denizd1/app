@@ -63,13 +63,16 @@ function buildLocationCondition(sequelize, geometry) {
   return sequelize.where(
     sequelize.fn(
       "ST_Contains",
-      sequelize.fn("ST_GeomFromGeoJSON", JSON.stringify(geometry)),
+      sequelize.fn(
+        "ST_SetSRID",
+        sequelize.fn("ST_GeomFromGeoJSON", JSON.stringify(geometry)),
+        4326 // Force WGS84 SRID for consistent spatial containment
+      ),
       sequelize.col("location")
     ),
     true
   );
 }
-
 // Extract full geo condition following original branching (il -> city polygon, areaJson, etc.)
 function extractGeoConditionFromQuery(sequelize, query) {
   const Q = query || {};
@@ -285,6 +288,121 @@ function enrichUpdateBodyFromPolygonCorners(body) {
     body["ilce"] = check.ilce.join(", ");
   }
 }
+// =========================================
+// Bellek dostu (streaming) versiyon:
+// Büyük datasetler için alternatif çıktı
+// =========================================
+const { Readable } = require("stream");
+
+/**
+ * Stream tabanlı GeoJSON çıktısı (bellek dostu)
+ * - rows: Sequelize sonucu (array)
+ * - res: Express Response objesi
+ */
+function streamPlotData(rows, res) {
+  try {
+    const fieldsToPick = [
+      "id",
+      "yontem",
+      "alt_yontem",
+      "nokta_adi",
+      "proje_kodu",
+      "calisma_amaci",
+      "calisma_tarihi",
+      "x",
+      "y",
+      "profil_baslangic_x",
+      "profil_baslangic_y",
+      "profil_bitis_x",
+      "profil_bitis_y",
+      "zone",
+      "line",
+      "datum",
+      "a_1",
+      "a_2",
+      "a_3",
+      "a_4",
+      "lat",
+      "lon",
+    ];
+
+    const altYontemCounts = {};
+    let firstFeature = true;
+
+    // HTTP header
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.write('{"type":"FeatureCollection","features":[');
+
+    for (const r of rows) {
+      // Alt yöntem istatistiği
+      if (r.alt_yontem)
+        altYontemCounts[r.alt_yontem] =
+          (altYontemCounts[r.alt_yontem] || 0) + 1;
+
+      // Feature objesi oluştur
+      const out = {};
+      for (const k of fieldsToPick) {
+        if (r[k] !== undefined) out[k] = r[k];
+      }
+
+      const feature = {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [r.lon, r.lat],
+        },
+        properties: out,
+      };
+
+      if (!firstFeature) res.write(",");
+      res.write(JSON.stringify(feature));
+      firstFeature = false;
+    }
+
+    res.write("],");
+    res.write(`"altYontemCounts":${JSON.stringify(altYontemCounts)}}`);
+    res.end();
+  } catch (err) {
+    console.error("streamPlotData error:", err);
+    res.status(500).send({
+      message: "Streaming GeoJSON sırasında hata oluştu.",
+    });
+  }
+}
+function postProcessPlotDataLite(rows) {
+  const altYontemCounts = {};
+  const features = [];
+
+  for (const item of rows) {
+    if (item.alt_yontem)
+      altYontemCounts[item.alt_yontem] =
+        (altYontemCounts[item.alt_yontem] || 0) + 1;
+
+    // Point geometry oluştur
+    if (item.lat && item.lon) {
+      const feature = {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [item.lon, item.lat] },
+        properties: {
+          id: item.id,
+          yontem: item.yontem,
+          alt_yontem: item.alt_yontem,
+          nokta_adi: item.nokta_adi,
+          proje_kodu: item.proje_kodu,
+          calisma_amaci: item.calisma_amaci,
+          calisma_tarihi: item.calisma_tarihi,
+        },
+      };
+      features.push(feature);
+    }
+  }
+
+  return {
+    type: "FeatureCollection",
+    features,
+    altYontemCounts,
+  };
+}
 
 module.exports = {
   converter,
@@ -297,4 +415,6 @@ module.exports = {
   enrichUpdateBodyFromPoint,
   enrichUpdateBodyFromLine,
   enrichUpdateBodyFromPolygonCorners,
+  streamPlotData,
+  postProcessPlotDataLite,
 };
