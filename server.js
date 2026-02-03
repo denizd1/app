@@ -54,7 +54,7 @@ app.use(
     secret: process.env.SESSIONSECRET,
     resave: true,
     saveUninitialized: true,
-  })
+  }),
 );
 app.use(cookieParser());
 app.use(helmet());
@@ -79,6 +79,7 @@ if (cluster.isMaster) {
   require(__dirname + "/routes/auth.routes")(app);
   require(__dirname + "/routes/user.routes")(app);
   require(__dirname + "/routes/rapor.routes")(app);
+  require(__dirname + "/routes/project.method.routes")(app);
   const excelRoutes = require(__dirname + "/routes/excel.routes");
   app.use("/excel", excelRoutes);
   app.use((req, res, next) => {

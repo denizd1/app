@@ -30,10 +30,29 @@ db.user = require("../models/user.model.js")(sequelize, Sequelize);
 db.tutorials = require("../models/tutorial.model.js")(sequelize, Sequelize);
 db.role = require("../models/role.model.js")(sequelize, Sequelize);
 db.rapor = require("../models/rapor.model.js")(sequelize, Sequelize);
+db.projectMethod = require("../models/project.method.model.js")(
+  sequelize,
+  Sequelize,
+);
 db.refreshToken = require("../models/refreshToken.model.js")(
   sequelize,
-  Sequelize
+  Sequelize,
 );
+
+// İLİŞKİ TANIMI (JOIN MANTIĞI)
+// Bir projenin birden fazla raporu olabilir (HasMany)
+db.projectMethod.hasMany(db.rapor, {
+  foreignKey: "proje_kodu", // Reports tablosundaki bağlantı kolonu
+  sourceKey: "proje_kodu", // ProjectMethods tablosundaki referans kolonu
+  as: "reports", // Sorguda bu isimle gelecek
+});
+
+// Bir rapor bir projeye aittir (BelongsTo)
+db.rapor.belongsTo(db.projectMethod, {
+  foreignKey: "proje_kodu",
+  targetKey: "proje_kodu",
+  as: "project",
+});
 
 db.role.belongsToMany(db.user, {
   through: "user_roles",
