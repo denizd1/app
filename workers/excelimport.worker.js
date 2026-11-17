@@ -118,5 +118,37 @@ worker.on("completed", (job, result) => {
 worker.on("failed", (job, err) => {
   console.error(`❌ Job ${job?.id} failed:`, err);
 });
+// BullMQ recommends "error" listeners; this also logs a Redis connection error
+// as one line instead of the whole error object.
+worker.on("error", (err) => {
+  console.error("Excel import worker error:", err.message);
+});
+geoQueue.on("error", (err) => {
+  console.error("geo-processing queue error:", err.message);
+});
+
+// Graceful stop: an import cut off half way is retried from the first row and
+// inserts the rows again, so let the running import finish, then exit. pm2
+// sends the "shutdown" message (shutdown_with_message in ecosystem.config.js,
+// needed on Windows where there are no signals); SIGINT/SIGTERM cover Ctrl+C
+// and Linux.
+let stopping = false;
+async function shutdown(reason) {
+  if (stopping) return;
+  stopping = true;
+  console.log(`${reason}: finishing the running import, then exiting...`);
+  try {
+    await worker.close();
+    await geoQueue.close();
+  } catch (err) {
+    console.error("Error while closing the excel import worker:", err);
+  }
+  process.exit(0);
+}
+process.on("message", (msg) => {
+  if (msg === "shutdown") shutdown("Shutdown requested");
+});
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 console.log("📘 Excel import worker started and listening for jobs...");

@@ -205,4 +205,7 @@ module.exports = {
   checkPointInPolygon,
   intersectionCheck,
   intersectionCheckLine,
+  // Parsed data, shared with services/geo.service.js. Read-only.
+  cities,
+  districts,
 };

@@ -1,19 +1,19 @@
 // ==============================
 // FILE: src/services/geo.service.js
 // ==============================
-const fs = require("fs");
 const utmObj = require("utm-latlng");
 const geojsonobj = require("geojson");
 const turflinestring = require("turf-linestring");
+// coordfinder.js has already parsed tr-cities-utf8.geojson and tr_ilce.geojson.
+// Reusing its objects (both modules only read them) saves a second ~270 MB copy
+// in every server process.
 const {
   checkPointInPolygon,
   intersectionCheck,
   intersectionCheckLine,
+  cities: illergeojson,
+  districts: ilceler,
 } = require("../controllers/coordfinder.js"); // path unchanged relative to original
-
-// Load GeoJSONs once (same files as original)
-const illergeojson = JSON.parse(fs.readFileSync("tr-cities-utf8.geojson"));
-const ilceler = JSON.parse(fs.readFileSync("tr_ilce.geojson"));
 
 function converter(x, y, zone, datum) {
   if (x == null || y == null || zone == null || datum == null) {
