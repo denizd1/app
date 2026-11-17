@@ -1,5 +1,5 @@
-// PM2 process file: the web server (cluster mode, one copy per CPU core), the
-// two BullMQ workers and an hourly log rotation job.
+// PM2 process file: Redis, the web server (cluster mode, one copy per CPU
+// core), the two BullMQ workers and an hourly log rotation job.
 //
 //   npx pm2 start ecosystem.config.js    start everything
 //   npx pm2 reload ecosystem.config.js   apply a code update (web: no downtime)
@@ -12,7 +12,24 @@
 // limits 2048 / 2048 / 4096 MB. To use other values set the variables below
 // (e.g. `setx WEB_INSTANCES 3`), then in a new shell `npx pm2 delete all`,
 // `npx pm2 start ecosystem.config.js` and `npx pm2 save`.
+const fs = require("fs");
 const os = require("os");
+const path = require("path");
+
+// Redis for Windows, run by PM2 so it also comes back after a crash or reboot.
+// Another folder can be given with the REDIS_DIR environment variable.
+const REDIS_DIR =
+  process.env.REDIS_DIR ||
+  "C:\\Users\\Busrabihter.kurt\\Desktop\\redis-windows-master\\redis-windows-master";
+const REDIS_SERVER = path.join(REDIS_DIR, "redis-server.exe");
+// Windows builds ship redis.conf or redis.windows.conf; use whichever exists.
+const REDIS_CONF = ["redis.conf", "redis.windows.conf"]
+  .map((name) => path.join(REDIS_DIR, name))
+  .find((file) => fs.existsSync(file));
+const REDIS_FOUND = fs.existsSync(REDIS_SERVER);
+if (!REDIS_FOUND && process.platform === "win32") {
+  console.warn(`[ecosystem] ${REDIS_SERVER} not found: Redis is not started by PM2.`);
+}
 
 const CPUS =
   typeof os.availableParallelism === "function"
@@ -74,8 +91,25 @@ const service = {
   exp_backoff_restart_delay: 100,
 };
 
+const redis = {
+  ...service,
+  name: "redis",
+  script: REDIS_SERVER,
+  interpreter: "none", // a program, not a Node.js script
+  exec_mode: "fork",
+  instances: 1,
+  // dump.rdb and relative paths in the config file are kept in this folder.
+  cwd: REDIS_DIR,
+  // Without a config file listen on localhost only (the app connects to
+  // 127.0.0.1:6379); this also avoids a Windows Firewall prompt.
+  args: REDIS_CONF ? [REDIS_CONF] : ["--bind", "127.0.0.1"],
+};
+
 module.exports = {
   apps: [
+    // Listed first so it starts first; the apps reconnect on their own if
+    // Redis comes up a moment later.
+    ...(REDIS_FOUND ? [redis] : []),
     {
       ...service,
       name: "app-server",

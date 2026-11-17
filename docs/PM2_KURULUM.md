@@ -13,6 +13,7 @@ yeniden başladığında otomatik olarak geri gelmesini anlatır. Örneklerde pr
 
 | Uygulama | Mod | Adet | Bellek limiti (heap) | Boştayken bellek |
 |---|---|---|---|---|
+| `redis` (`redis-server.exe`, bkz. bölüm 8) | fork | 1 | – | birkaç MB |
 | `app-server` (web, `server.js`) | cluster | 4 (her çekirdek için 1) | 2048 MB | ~0,4 GB / kopya |
 | `geo-worker` | fork | 2 | 2048 MB | ~0,4 GB / kopya |
 | `excel-import-worker` | fork | 1 | 4096 MB | ~0,1 GB (import sırasında artar) |
@@ -28,18 +29,21 @@ import sırasındaki artış için kalır. Node.js tek bir süreçte varsayılan
   hazır değilse).
 - Bir web kopyası çökerse diğer üçü istekleri karşılamaya devam eder.
 - Worker'lar durdurulurken (restart/reload/stop) ellerindeki işi bitirip öyle kapanır.
-  Excel import'u için en fazla 10 dk, geo işi için en fazla 2 dk beklenir.
+  Excel import'u için en fazla 10 dk, geo işi için en fazla 2 dk beklenir. Boştaki
+  worker hemen kapanır. Redis de kapatılmışsa iş zaten tamamlanamayacağı için en fazla
+  15 sn beklenir.
 
 ## 1. Ön koşullar (sunucuda bir kez kontrol)
 
 1. Node.js 18 veya üstü: `node -v`
-2. PostgreSQL ve Redis çalışıyor ve **açılışta otomatik başlıyor** olmalı. PowerShell'de:
+2. PostgreSQL çalışıyor ve **açılışta otomatik başlıyor** olmalı. PowerShell'de:
    ```powershell
-   Get-Service *postgres*, *redis*, *memurai* | Select Name, Status, StartType
+   Get-Service *postgres* | Select Name, Status, StartType
    ```
-   `StartType` değeri `Automatic` olmalı. Redis'i servis olarak değil de elle
-   (`redis-server.exe`) çalıştırıyorsanız, onu da PM2'ye ekleyin (bkz. bölüm 8).
-3. Proje klasöründe `.env` dosyası bulunmalı.
+   `StartType` değeri `Automatic` olmalı.
+3. Redis'i PM2 başlatır (bölüm 8). PM2'yi ilk kez başlatmadan önce elle açtığınız
+   Redis penceresini kapatın; yoksa 6379 portu dolu olur.
+4. Proje klasöründe `.env` dosyası bulunmalı.
 
 ## 2. Dosyaları hazırlama (internetli bilgisayarda)
 
@@ -135,16 +139,20 @@ Test: görevde sağ tık → Çalıştır, sonra `npx pm2 ls`. A ve B birlikte k
 | Yeniden başlat | `npx pm2 restart geo-worker` |
 | Tümünü durdur | `npx pm2 stop all` |
 
+Excel import'u sürerken `stop all` ya da `kill` kullanmayın. Redis de durduğu için
+import tamamlanamaz; sonradan baştan çalışır ve satırları ikinci kez ekler. Önce
+import'un bitmesini bekleyin (kuyruklar: `http://sunucu:8080/admin/queues`).
+
 **Kod güncellemesi:** yeni dosyaları kopyalayın (`.env` korunsun), sonra:
 
 ```bat
-npx pm2 reload ecosystem.config.js
+npx pm2 reload ecosystem.config.js --only app-server,geo-worker,excel-import-worker
 npx pm2 save
 ```
 
-Web kopyaları sırayla yenilenir, site kesintisiz çalışır. Worker'lar ellerindeki işi
-bitirmeyi bekler; Excel import'u sürüyorsa komut birkaç dakika sürebilir. PM2 sürümü
-değiştiyse ayrıca `npx pm2 update` çalıştırın.
+Redis'e dokunulmaz. Web kopyaları sırayla yenilenir ve site kesintisiz çalışır.
+Worker'lar ellerindeki işi bitirmeyi bekler; Excel import'u sürüyorsa komut birkaç
+dakika sürebilir. PM2 sürümü değiştiyse ayrıca `npx pm2 update` çalıştırın.
 
 ## 6. Ayar değiştirme (çekirdek / RAM)
 
@@ -181,29 +189,38 @@ Değişkenler: `WEB_INSTANCES`, `GEO_WORKERS`, `EXCEL_WORKERS`, `WEB_HEAP_MB`,
 - Not: geo-worker her satır için log yazdığından satır başına ~3 KB log oluşur
   (100.000 satır ≈ 300 MB).
 
-## 8. Redis servis değilse
+## 8. Redis
 
-Redis'i elle başlatılan bir `redis-server.exe` ile çalıştırıyorsanız, PM2'nin onu da
-ayakta tutması için `ecosystem.config.js` içindeki `apps` listesine ekleyin (yolları
-kendi kurulumunuza göre değiştirin):
+PM2, `redis-server.exe` dosyasını şu klasörden çalıştırır:
+`C:\Users\Busrabihter.kurt\Desktop\redis-windows-master\redis-windows-master`
+(`redis-cli.exe` yalnızca istemcidir; sunucu aynı klasördeki `redis-server.exe`).
 
-```js
-{
-  name: "redis",
-  script: "C:\\redis\\redis-server.exe",
-  args: "C:\\redis\\redis.windows.conf",
-  interpreter: "none",
-  autorestart: true,
-},
-```
+- Klasörde `redis.conf` ya da `redis.windows.conf` varsa o kullanılır. Yoksa Redis
+  varsayılan ayarlarla ve yalnızca `127.0.0.1` üzerinde dinler.
+- Veri dosyası (`dump.rdb`) aynı klasöre yazılır.
+- Klasör yanlışsa `npx pm2 start` şu uyarıyı verir:
+  `[ecosystem] ...redis-server.exe not found`. Başka bir klasör kullanmak için:
+  ```bat
+  setx REDIS_DIR "D:\redis"
+  ```
+  ardından yeni bir cmd penceresinde `npx pm2 delete all`,
+  `npx pm2 start ecosystem.config.js`, `npx pm2 save`.
+- Kontrol: Redis klasöründe `redis-cli ping` komutu `PONG` döndürmeli.
 
-Ardından `npx pm2 start ecosystem.config.js --only redis` ve `npx pm2 save`.
+**İsteğe bağlı, önerilir:** Windows'ta PM2, Redis'i durdururken ya da sunucu yeniden
+başlarken süreci zorla kapatır. Bu durumda son kayıttan (snapshot) sonraki kuyruk
+değişiklikleri kaybolabilir. Kaybı en fazla 1 saniyeye indirmek için AOF'u açın:
+`redis-cli config set appendonly yes`. Kalıcı olması için config dosyasındaki
+`appendonly no` satırını `appendonly yes` yapın.
 
 ## 9. Sorun giderme
 
 - **Bir uygulama sürekli yeniden başlıyor (↺ artıyor):**
   `npx pm2 logs <ad> --lines 100` ile hatayı görün. Çoğunlukla `.env`,
   PostgreSQL veya Redis bağlantısıyla ilgilidir.
+- **`redis` sürekli yeniden başlıyor:** `npx pm2 logs redis` çıktısında 6379 portu
+  için bir `bind` hatası varsa portu elle açılmış başka bir Redis kullanıyordur; onu
+  kapatın.
 - **Açılıştan sonra hiçbir şey çalışmıyor:** `%USERPROFILE%\.pm2\boot.log` dosyasına
   bakın. `node` bulunamadıysa `scripts\pm2-boot.cmd` içindeki `NODE` satırına
   `node.exe`'nin tam yolunu yazın. `npx pm2 save` yapılmış olmalı.

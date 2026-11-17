@@ -127,28 +127,8 @@ geoQueue.on("error", (err) => {
   console.error("geo-processing queue error:", err.message);
 });
 
-// Graceful stop: an import cut off half way is retried from the first row and
-// inserts the rows again, so let the running import finish, then exit. pm2
-// sends the "shutdown" message (shutdown_with_message in ecosystem.config.js,
-// needed on Windows where there are no signals); SIGINT/SIGTERM cover Ctrl+C
-// and Linux.
-let stopping = false;
-async function shutdown(reason) {
-  if (stopping) return;
-  stopping = true;
-  console.log(`${reason}: finishing the running import, then exiting...`);
-  try {
-    await worker.close();
-    await geoQueue.close();
-  } catch (err) {
-    console.error("Error while closing the excel import worker:", err);
-  }
-  process.exit(0);
-}
-process.on("message", (msg) => {
-  if (msg === "shutdown") shutdown("Shutdown requested");
-});
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+// On pm2 stop/restart finish the running import before exiting: an import cut
+// off half way is retried from the first row and inserts the rows again.
+require("./gracefulShutdown")(worker, "excel import worker");
 
 console.log("📘 Excel import worker started and listening for jobs...");

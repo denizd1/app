@@ -263,23 +263,5 @@ worker.on("error", (err) => {
   console.error("Geo worker error:", err.message);
 });
 
-// Graceful stop: finish the running job, then exit. pm2 sends the "shutdown"
-// message (shutdown_with_message in ecosystem.config.js, needed on Windows
-// where there are no signals); SIGINT/SIGTERM cover Ctrl+C and Linux.
-let stopping = false;
-async function shutdown(reason) {
-  if (stopping) return;
-  stopping = true;
-  console.log(`${reason}: finishing the running job, then exiting...`);
-  try {
-    await worker.close();
-  } catch (err) {
-    console.error("Error while closing the geo worker:", err);
-  }
-  process.exit(0);
-}
-process.on("message", (msg) => {
-  if (msg === "shutdown") shutdown("Shutdown requested");
-});
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+// On pm2 stop/restart finish the running job before exiting.
+require("./gracefulShutdown")(worker, "geo worker");
