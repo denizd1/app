@@ -12,12 +12,13 @@ const geo = require("../services/geo.service");
 // GET /tutorials
 exports.findAll = async (req, res) => {
   try {
-    const { page, size } = req.query;
+    const params = req.body;
+    const { page, size } = params;
     const pagination = getPagination(page, size);
     const data = await tutorialService.findAll(
-      req.query,
+      params,
       pagination,
-      Tutorial.sequelize
+      Tutorial.sequelize,
     );
     res.send(getPagingData(data, page, pagination.limit));
   } catch (err) {
@@ -31,6 +32,7 @@ exports.findAll = async (req, res) => {
 // GET /tutorials/getall (geojson + lines + counts OR excel)
 exports.findAllgetAll = async (req, res) => {
   console.log("findAllgetAll called with params:", req.query);
+  const params = req.query;
   try {
     const { geojson, requestFlag } = req.query;
     let polygonCondition = null;
@@ -94,7 +96,7 @@ exports.findAllgetAll = async (req, res) => {
       if (geometry) {
         polygonCondition = geo.buildLocationCondition(
           Tutorial.sequelize,
-          geometry
+          geometry,
         );
         console.log("✅ Polygon condition built for /getall.");
       }
@@ -107,7 +109,7 @@ exports.findAllgetAll = async (req, res) => {
         req.query,
         Tutorial.sequelize,
         res,
-        polygonCondition
+        polygonCondition,
       );
     }
 
@@ -115,7 +117,7 @@ exports.findAllgetAll = async (req, res) => {
     const rows = await tutorialService.findAllRaw(
       req.query,
       Tutorial.sequelize,
-      polygonCondition
+      polygonCondition,
     );
 
     if (rows.length > 200000) {
@@ -140,27 +142,28 @@ exports.findAllgetAll = async (req, res) => {
 
 // GET /tutorials/geo (accepts geojson or ilce id) (and excel)
 exports.findAllGeo = async (req, res) => {
-  console.log("findAllGeo called with params:", req.query);
+  // 1. Loglamayı req.body yapıyoruz
+  console.log("findAllGeo (POST) called with body params:", req.body);
   try {
-    const { geojson, requestFlag } = req.query;
+    // 2. Verileri body'den alıyoruz
+    const { geojson, requestFlag } = req.body;
     let polygonCondition = null;
 
     if (geojson) {
-      let geometry = null;
+      let geometry = null; // 🧭 Case 1: geojson is an array of coordinates (POST ile gelen array buraya düşer)
 
-      // 🧭 Case 1: geojson is an array of coordinate strings
       if (Array.isArray(geojson)) {
         try {
           const coords = geojson.map((c) => {
+            // String gelirse temizle, yoksa (native array ise) olduğu gibi döndür
             if (typeof c === "string") {
               const clean = c.replace(/[\[\]\s]/g, "");
               const parts = clean.split(",").map(Number);
               return [parts[0], parts[1]];
             }
             return c;
-          });
+          }); // İlk ve son nokta kontrolü (Polygon kapatma)
 
-          // ilk ve son nokta kapanmamışsa kapat
           const first = coords[0];
           const last = coords[coords.length - 1];
           if (first && last && (first[0] !== last[0] || first[1] !== last[1])) {
@@ -172,10 +175,8 @@ exports.findAllGeo = async (req, res) => {
         } catch (err) {
           console.warn("⚠️ Failed to parse coordinate array:", err.message);
         }
-      }
-
-      // 🧭 Case 2: geojson is a string (id or GeoJSON)
-      else if (typeof geojson === "string") {
+      } else if (typeof geojson === "string" || typeof geojson === "number") {
+        // 🧭 Case 2: geojson is a string (id or GeoJSON string)
         const parsed = geo.parseAreaJson(geojson);
         if (parsed && parsed.geometry) {
           geometry = parsed.geometry;
@@ -183,38 +184,35 @@ exports.findAllGeo = async (req, res) => {
         } else {
           console.warn("⚠️ Could not parse geojson string:", geojson);
         }
-      }
+      } // 🔧 Build polygon condition
 
-      // 🔧 Build polygon condition
       if (geometry) {
         polygonCondition = geo.buildLocationCondition(
           Tutorial.sequelize,
-          geometry
+          geometry,
         );
       } else {
         console.warn("⚠️ No valid geometry found, skipping spatial filter.");
       }
-    }
+    } // 🟡 Excel export mode
 
-    // 🟡 Excel export mode
     if (requestFlag === "excel") {
       console.log(
         "🟡 Excel export triggered with polygonCondition:",
-        !!polygonCondition
+        !!polygonCondition,
       );
       return tutorialService.streamExcel(
-        req.query,
+        req.body, // <--- BURASI DEĞİŞTİ (req.query -> req.body)
         Tutorial.sequelize,
         res,
-        polygonCondition
+        polygonCondition,
       );
-    }
+    } // 📦 Normal data retrieval
 
-    // 📦 Normal data retrieval
     const rows = await tutorialService.findAllGeo(
-      req.query,
+      req.body, // <--- BURASI DEĞİŞTİ (req.query -> req.body)
       Tutorial.sequelize,
-      polygonCondition
+      polygonCondition,
     );
 
     if (rows.length > 50000) {
@@ -313,7 +311,7 @@ exports.distinct = async (req, res) => {
       };
       locationCondition = geo.buildLocationCondition(
         Tutorial.sequelize,
-        geometry
+        geometry,
       );
     }
 

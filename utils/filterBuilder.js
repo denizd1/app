@@ -4,8 +4,13 @@
 const { Op } = require("sequelize");
 
 // Helper: normalize a value to array (if present)
-const asArrayIfPresent = (v) => (v == null ? null : Array.isArray(v) ? v : [v]);
-
+const asArrayIfPresent = (v) => {
+  if (v == null) return null;
+  if (Array.isArray(v)) {
+    return v.length > 0 ? v : null; // Dizi boşsa null dön
+  }
+  return [v];
+};
 // Builds a Sequelize-compatible `where` array preserving the original behavior
 function buildFilters(query, locationCondition) {
   const Q = query || {};
@@ -96,7 +101,7 @@ function buildFilters(query, locationCondition) {
     ];
     add({
       [Op.or]: Object.fromEntries(
-        searchFields.map((f) => [f, { [Op.iLike]: `%${Q.il}%` }])
+        searchFields.map((f) => [f, { [Op.iLike]: `%${Q.il}%` }]),
       ),
     });
   } else {

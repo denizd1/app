@@ -26,22 +26,22 @@ module.exports = (app) => {
     "/upload",
     [authJwt.verifyToken, authJwt.isModeratorOrAdmin, upload.single("file")],
 
-    excelController.upload
+    excelController.upload,
   );
 
   //get number of tutorials for each alt_yontem
   router.get(
     "/AltYontemCount",
     [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
-    tutorials.AltYontemCount
+    tutorials.AltYontemCount,
   );
 
   // Retrieve all Tutorials
-  router.get("/", [authJwt.verifyToken], tutorials.findAll);
+  router.post("/", [authJwt.verifyToken], tutorials.findAll);
   router.get("/getall", [authJwt.verifyToken], tutorials.findAllgetAll);
 
   // Retrieve all Tutorials in geojson
-  router.get("/findAllGeo", [authJwt.verifyToken], tutorials.findAllGeo);
+  router.post("/findAllGeo", [authJwt.verifyToken], tutorials.findAllGeo);
 
   // Retrieve all published Tutorials
   router.get("/published", [authJwt.verifyToken], tutorials.findAllPublished);
@@ -50,7 +50,7 @@ module.exports = (app) => {
   router.get(
     "/unpublished",
     [authJwt.verifyToken, authJwt.isAdmin],
-    tutorials.findAllUnpublished
+    tutorials.findAllUnpublished,
   );
 
   // Retrieve a single Tutorial with id
@@ -58,27 +58,27 @@ module.exports = (app) => {
     "/:id",
     [authJwt.verifyToken],
     expAutoSan.route,
-    tutorials.findOne
+    tutorials.findOne,
   );
   // Update a Tutorial with id
   router.put(
     "/:id",
     [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
     expAutoSan.route,
-    tutorials.update
+    tutorials.update,
   );
 
   // Delete a Tutorial with id
   router.delete(
     "/:id",
     [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
-    tutorials.delete
+    tutorials.delete,
   );
   // routes/tutoral.routes.js
   router.post(
     "/bulk-delete",
     [authJwt.verifyToken, authJwt.isModeratorOrAdmin],
-    tutorials.bulkDelete
+    tutorials.bulkDelete,
   );
 
   // Delete all Tutorials
