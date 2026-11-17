@@ -257,3 +257,29 @@ worker.on("completed", (job) => {
 worker.on("failed", (job, err) => {
   console.error(`Geo job ${job?.id} failed:`, err);
 });
+// BullMQ recommends an "error" listener on every worker; this also logs a
+// Redis connection error as one line instead of the whole error object.
+worker.on("error", (err) => {
+  console.error("Geo worker error:", err.message);
+});
+
+// Graceful stop: finish the running job, then exit. pm2 sends the "shutdown"
+// message (shutdown_with_message in ecosystem.config.js, needed on Windows
+// where there are no signals); SIGINT/SIGTERM cover Ctrl+C and Linux.
+let stopping = false;
+async function shutdown(reason) {
+  if (stopping) return;
+  stopping = true;
+  console.log(`${reason}: finishing the running job, then exiting...`);
+  try {
+    await worker.close();
+  } catch (err) {
+    console.error("Error while closing the geo worker:", err);
+  }
+  process.exit(0);
+}
+process.on("message", (msg) => {
+  if (msg === "shutdown") shutdown("Shutdown requested");
+});
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));

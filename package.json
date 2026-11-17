@@ -48,6 +48,7 @@
     "nodemailer": "^6.9.8",
     "pg": "^8.7.1",
     "pg-hstore": "^2.3.4",
+    "pm2": "^7.1.2",
     "rbush": "^4.0.1",
     "read-excel-file": "^5.5.3",
     "script-loader": "^0.7.2",
